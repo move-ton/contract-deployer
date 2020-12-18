@@ -12,20 +12,30 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 import sys
-from tonclient.client import TonClient,DEVNET_BASE_URL
+from tonclient.client import TonClient,DEVNET_BASE_URL, MAINNET_BASE_URL
 import os
 from tonclient.types import Abi, KeyPair, DeploySet, CallSet, Signer, \
     MessageSource, StateInitSource
 import base64
 from tonclient.net import TonQLQuery
-
+import json
 client = TonClient(network={'server_address': DEVNET_BASE_URL}, abi={'message_expiration_timeout': 30000})
+
+def clearLayout(layout):
+    if layout is not None:
+        while layout.count():
+            child = layout.takeAt(0)
+            if child.widget() is not None:
+                child.widget().deleteLater()
+            elif child.layout() is not None:
+                clearLayout(child.layout())
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(1384, 1133)
+        self.params = {}
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.gridLayout = QGridLayout(self.centralwidget)
@@ -136,60 +146,7 @@ class Ui_MainWindow(object):
 
         self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
 
-        self.verticalLayout_5 = QVBoxLayout()
-        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
-        self.horizontalLayout_4 = QHBoxLayout()
-        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.label = QLabel(self.centralwidget)
-        self.label.setObjectName(u"label")
 
-        self.horizontalLayout_4.addWidget(self.label)
-
-        self.verticalLayout_7 = QVBoxLayout()
-        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
-        self.horizontalLayout_7 = QHBoxLayout()
-        self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
-        self.label_4 = QLabel(self.centralwidget)
-        self.label_4.setObjectName(u"label_4")
-
-        self.horizontalLayout_7.addWidget(self.label_4)
-
-        self.checkBox = QCheckBox(self.centralwidget)
-        self.checkBox.setObjectName(u"checkBox")
-
-        self.horizontalLayout_7.addWidget(self.checkBox)
-
-
-        self.verticalLayout_7.addLayout(self.horizontalLayout_7)
-
-        self.horizontalLayout_5 = QHBoxLayout()
-        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
-        self.label_3 = QLabel(self.centralwidget)
-        self.label_3.setObjectName(u"label_3")
-
-        self.horizontalLayout_5.addWidget(self.label_3)
-
-        self.lineEdit = QLineEdit(self.centralwidget)
-        self.lineEdit.setObjectName(u"lineEdit")
-
-        self.horizontalLayout_5.addWidget(self.lineEdit)
-
-
-        self.verticalLayout_7.addLayout(self.horizontalLayout_5)
-
-        self.pushButton_2 = QPushButton(self.centralwidget)
-        self.pushButton_2.setObjectName(u"pushButton_2")
-
-        self.verticalLayout_7.addWidget(self.pushButton_2)
-
-
-        self.horizontalLayout_4.addLayout(self.verticalLayout_7)
-
-
-        self.verticalLayout_5.addLayout(self.horizontalLayout_4)
-
-
-        self.gridLayout.addLayout(self.verticalLayout_5, 1, 0, 1, 1)
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QStatusBar(MainWindow)
@@ -199,10 +156,71 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
         self.mainnetButton.clicked[bool].connect(self.gettesttokenButton.setDisabled)
 
-
+        self.window = QVBoxLayout()
+        self.window.setObjectName(u"window")
         QMetaObject.connectSlotsByName(MainWindow)
 
+
+
     # setupUi
+    def create_function(self,abi):
+        try:
+            clearLayout(self.verticalLayout_buttons)
+        except Exception as e:
+            print(e)
+        self.verticalLayout_buttons = QVBoxLayout()
+        self.verticalLayout_buttons.setObjectName(u"verticalLayout_2")
+        self.data_array = []
+        self.array_with_buttons = []
+        for i in abi['functions']:
+            if i['name'] == "constructor":
+                continue
+            id_button = len(self.array_with_buttons)
+            Hlayout = QHBoxLayout()
+            Hlayout.setObjectName(f"hlayout_{i['name']}")
+            self.array_with_buttons.append(QPushButton(self.centralwidget,i["name"]))
+            VLayout_input = QVBoxLayout()
+            VLayout_input.setObjectName(f"vlayout_input_{i['name']}")
+            input_list = []
+            for inputs in i["inputs"]:
+                Hlayout_input = QHBoxLayout()
+                Hlayout_input.setObjectName(f"hlayout_{i['name']}_{inputs['name']}")
+                label = QLabel(self.centralwidget)
+                label.setObjectName(f"label_{i['name']}_{inputs['name']}")
+                label.setText(inputs['name'])
+                Hlayout_input.addWidget(label)
+                lineEdit = QLineEdit(self.centralwidget)
+                lineEdit.setObjectName(f"lineEdit_{inputs['name']}")
+                Hlayout_input.addWidget(lineEdit)
+                VLayout_input.addLayout(Hlayout_input)
+                input_list.append([inputs['name'],lineEdit])
+            output_list = []
+            for outputs in i["outputs"]:
+                Hlayout_output = QHBoxLayout()
+                Hlayout_output.setObjectName(f"hlayout_{i['name']}_{outputs['name']}_output")
+                label = QLabel(self.centralwidget)
+                label.setObjectName(f"label_{i['name']}_{outputs['name']}_output")
+                label.setText(outputs['name'] + "_output")
+                Hlayout_output.addWidget(label)
+                lineEdit = QLabel(self.centralwidget)
+                lineEdit.setObjectName(f"lineEdit_{outputs['name']}_output")
+                lineEdit.setText("There is will be data")
+                Hlayout_output.addWidget(lineEdit)
+                VLayout_input.addLayout(Hlayout_output)
+                output_list.append([outputs['name'], lineEdit])
+            self.array_with_buttons[id_button].setObjectName(i["name"]+"_starbutton")
+            self.array_with_buttons[id_button].setText(i["name"])
+            self.array_with_buttons[id_button].clicked.connect(lambda name = i["name"], inputs = input_list,outputs = output_list: self.send_data(name,inputs,outputs))
+            # self.data_array.append([i["name"], , output_list])
+
+            Hlayout.addWidget(self.array_with_buttons[id_button])
+            Hlayout.addLayout(VLayout_input)
+            self.verticalLayout_buttons.addLayout(Hlayout)
+
+
+
+        self.gridLayout.addLayout(self.verticalLayout_buttons, 1, 0, 1, 0)
+
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
@@ -214,14 +232,15 @@ class Ui_MainWindow(object):
         self.mainnetButton.setText(QCoreApplication.translate("MainWindow", u"mainnet", None))
         self.gettesttokenButton.setText(QCoreApplication.translate("MainWindow", u"get test token", None))
         self.deploy.setText(QCoreApplication.translate("MainWindow", u"deploy", None))
-        self.label.setText(QCoreApplication.translate("MainWindow", u"functionName", None))
-        self.label_4.setText(QCoreApplication.translate("MainWindow", u"attribute", None))
-        self.checkBox.setText(QCoreApplication.translate("MainWindow", u"CheckBox", None))
-        self.label_3.setText(QCoreApplication.translate("MainWindow", u"attribute", None))
+
+        # self.label.setText(QCoreApplication.translate("MainWindow", u"functionName", None))
+        # self.label_4.setText(QCoreApplication.translate("MainWindow", u"attribute", None))
+        # self.checkBox.setText(QCoreApplication.translate("MainWindow", u"CheckBox", None))
+        # self.label_3.setText(QCoreApplication.translate("MainWindow", u"attribute", None))
         self.generateNewKeyFile.setText(QCoreApplication.translate("MainWindow",u'Generate New Key File'))
         self.openKeyFile.setText(QCoreApplication.translate("MainWindow", u'Open Key File'))
         self.public_key.setText(QCoreApplication.translate("MainWindow", u'public_key:'))
-        self.pushButton_2.setText(QCoreApplication.translate("MainWindow", u"PushButton", None))
+        #self.pushButton_2.setText(QCoreApplication.translate("MainWindow", u"PushButton", None))
     # retranslateUi
 
 class TonWrapper(object):
@@ -260,6 +279,19 @@ class TonWrapper(object):
         with open(path, 'rb') as fp:
             return base64.b64encode(fp.read()).decode()
 
+    def run_contract(self,address: str, abi: Abi, function_name: str, inputs: dict, signer=Signer()):
+        call_set = CallSet(
+            function_name=function_name,
+            inputs=inputs)
+        encoded = self.async_core_client.abi.encode_message(
+            abi=abi, signer=signer, address=address,
+            call_set=call_set)
+        shard_block_id = self.async_core_client.processing.send_message(
+            message=encoded["message"], send_events=False)
+        return self.async_core_client.processing.wait_for_transaction(encoded['message'], shard_block_id, send_events=False,
+                                                                 abi=abi)
+
+
 
     def generate_sign_keys(self):
         return self.async_core_client.crypto.generate_random_sign_keys()
@@ -268,15 +300,17 @@ class TonWrapper(object):
         deploy_set = DeploySet(tvc=tvc)
         call_set = CallSet(
             function_name='constructor', inputs=constructor_header)
-        deploy_message = self.async_core_client.abi.encode_message(
-            abi=abi, signer=signer, deploy_set=deploy_set, call_set=call_set)
+        deploy_message = self.async_core_client.processing.process_message(
+            abi=abi, signer=signer, deploy_set=deploy_set, call_set=call_set,send_events=False)
+        #self.async_core_client.processing.process_message()
+        #log = self.async_core_client.processing.process_message(message=deploy_message,send_events=False)
         return deploy_message
 
     def deploy_wallet(self,signer):
         return self.deploy_contract(abi=Abi.from_json_path(
             path=os.path.join(self.SAMPLES_DIR, 'wallet.abi.json')),tvc=self.open_tvc('abi/wallet.tvc'),signer=signer)
 
-    def send_grams(self,address: str,value:int,signer, bounce: bool,workchaind_id):
+    def send_grams(self,address: str,value:id,signer, bounce: bool,workchaind_id):
         wallet_abi = Abi.from_json_path(
             path=os.path.join(self.SAMPLES_DIR, 'wallet.abi.json'))
         call_set = CallSet(
@@ -304,10 +338,65 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.openKeyFile.clicked.connect(self.open_key)
         self.pushButton.clicked.connect(self.compile_contract)
         self.gettesttokenButton.clicked.connect(self.get_testnet_token)
+        self.mainnetButton.clicked[bool].connect(self.handler_change_mainnet)
+        self.deploy.clicked.connect(self.compile)
 
+#    print(run_contract(GIVER_ADDRESS, Abi.from_json_path(
+ #       path=os.path.join(SAMPLES_DIR, 'Giver.abi.json')), 'grant',
+   #                    {'addr': "0:7ecb2f57fb27f26423eb524f8c2fcbae8182a2b7cef9f2dfe5d76e51327ffe64"}))
     def tr(self, text):
         return QObject.tr(self, text)
 
+    def send_data(self,function_name,inputs,outputs):
+        with open(".contract.abi.json") as f:
+            data = json.loads(f.read())
+        sender = {}
+        for i in inputs:
+            for x in data["functions"]:
+                if x["name"] == function_name:
+                    for t in x["inputs"]:
+                        if t["name"] == i[0]:
+                            if "int" in t["type"]:
+                                sender[i[0]] = int(i[1].text())
+                            else:
+                                sender[i[0]] = i[1].text()
+        #m = QMessageBox.about(self, "Running...", "Please wait for a while. Dont press any button")
+        print(self.addr,Abi.from_json_path(
+            path='.contract.abi.json'),function_name,sender,Signer(self.main_key))
+        response = self.wrapper.run_contract(self.addr,Abi.from_json_path(
+            path='.contract.abi.json'),function_name,sender,signer=Signer(self.main_key))
+        QMessageBox.about(self, "Running...", str(response))
+
+    def update_balance(self):
+        query = TonQLQuery(collection='accounts')
+        query = query.set_filter(id__eq=self.addr)
+        query = query.set_result('balance')
+        result = client.net.query_collection(query)
+        print(result)
+        if len(result) == 0:
+            balance = 0
+        else:
+            balance = round(int(result[0]['balance'], 16) / 10 ** 9, 3)
+        print(result)
+        self.label_2.setText(QCoreApplication.translate("MainWindow", f"Balance: {balance} 💎", None))
+
+    def compile(self):
+        m = QMessageBox.about(self,"Deploying...","Please wait for a while. Dont press any button")
+        result = self.wrapper.deploy_contract(abi=Abi.from_json_path(
+            path='.contract.abi.json'),tvc=self.wrapper.open_tvc('.contract.tvc'),signer=Signer(self.main_key))
+        m.setText(str(result))
+
+
+
+    def handler_change_mainnet(self,is_enabled):
+        global client
+        if is_enabled:
+            client = TonClient(network={'server_address': MAINNET_BASE_URL}, abi={'message_expiration_timeout': 30000})
+            self.wrapper = TonWrapper({'server_address': MAINNET_BASE_URL})
+        else:
+            client = TonClient(network={'server_address': DEVNET_BASE_URL}, abi={'message_expiration_timeout': 30000})
+            self.wrapper = TonWrapper({'server_address': DEVNET_BASE_URL})
+        self.update_balance()
     def compile_contract(self):
         if not ".tmp_contract_deployer" in os.listdir():
             os.mkdir(".tmp_contract_deployer")
@@ -323,17 +412,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             path='.contract.abi.json'),self.wrapper.open_tvc(".contract.tvc"))
         self.address.setText(QCoreApplication.translate("MainWindow", f"Address of contract: {addr}", None))
         self.addr = addr
-        query = TonQLQuery(collection='accounts')
-        query = query.set_filter(id__eq=addr)
-        query = query.set_result('balance')
-        result = client.net.query_collection(query)
-        print(result)
-        if len(result) == 0:
-            balance = 0
-        else:
-            balance = round(int(result[0]['balance'],16) / 10 ** 9,3)
-        print(result)
-        self.label_2.setText(QCoreApplication.translate("MainWindow", f"Balance: {balance} 💎", None))
+        self.update_balance()
+        with open(".contract.abi.json") as f:
+            data = json.loads(f.read())
+
+        self.create_function(data)
+
     def get_testnet_token(self):
         self.wrapper.get_testnet_grams(self.addr)
         query = TonQLQuery(collection='accounts')
