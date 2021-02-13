@@ -3,7 +3,7 @@ This is the program whom can help you to devoliping and testing a smartcontracts
 
 In first you have to install PySide2 and tonclient
 
-`pip install ton-client-py==1.0.0.1 pyside2`
+`pip install ton-client-py==1.0.0.6 pyside2`
 
 Then you have to compile and place in folder with interface.py __solc tvm_linker__ and __stdlib_sol.tvm__.
 
